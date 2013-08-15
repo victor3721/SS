@@ -1,0 +1,26 @@
+//
+//  TPASinaAuthorize.h
+//  ThirdPartAccount
+//
+//  Created by Martin Yin on 12-7-17.
+//  Copyright (c) 2012年 Autonavi. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "TPAAuthorize.h"
+#import "TPASinaAuthorizeWebView.h"
+#import "TPASinaRequest.h"
+
+@interface TPASinaAuthorize : NSObject <TPAAuthorize, TPAAuthorizeWebViewDelegate, TPARequestDelegate> {
+	TPASinaAuthorizeWebView		*_webView;
+	TPASinaRequest				*_request;
+}
+
+@property (strong, nonatomic) NSString *appKey;
+@property (strong, nonatomic) NSString *appSecret;
+@property (strong, nonatomic) NSString *redirectURI;
+@property (assign, nonatomic) id<TPAAuthorizeDelegate> delegate;
+
+- (void)refreshAuthorize:(NSString *)accessToken;
+
+@end

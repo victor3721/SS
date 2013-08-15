@@ -1,0 +1,94 @@
+//
+//  TPATencentRequest.m
+//  ThirdPartAccount
+//
+//  Created by Martin Yin on 12-7-17.
+//  Copyright (c) 2012年 Autonavi. All rights reserved.
+//
+
+#import "TPATencentRequest.h"
+#import "TPATencentDefines.h"
+#import "CJSONDeserializer.h"
+
+@implementation TPATencentRequest
+
+- (id)errorWithCode:(NSInteger)code userInfo:(NSDictionary *)userInfo {
+    return [NSError errorWithDomain:kTencentErrorDomain code:code userInfo:userInfo];
+}
+
+- (id)parseJSONData:(NSData *)data error:(NSError **)error {
+	CJSONDeserializer *deserializer = [CJSONDeserializer deserializer];
+	
+	NSError *parseError = nil;
+	//	id result = [jsonParser objectWithString:dataString error:&parseError];
+	id result = [deserializer deserialize:data error:&parseError];
+	
+	if (parseError) {
+		if (error != nil) {
+			*error = [self errorWithCode:kTencentErrorCode
+								userInfo:[NSDictionary dictionaryWithObject:[NSString stringWithFormat:@"%d", kTencentErrorCodeParseError]
+																	 forKey:kTencentErrorCodeKey]];
+		}
+	}
+	
+	if ([result isKindOfClass:[NSDictionary class]]) {
+		if ([result objectForKey:@"error_code"] != nil && [[result objectForKey:@"error_code"] intValue] != 200) {
+			if (error != nil) {
+				*error = [self errorWithCode:kTencentErrorCodeInterface userInfo:result];
+			}
+		}
+	}
+	
+	return result;
+}
+
+- (void)handleResponseData {
+	if ([self.delegate respondsToSelector:@selector(request:didReceiveRawData:)]) {
+		[self.delegate request:self didReceiveRawData:_responseData];
+	}
+
+	NSString *responseString = [[[NSString alloc] initWithData:_responseData encoding:NSUTF8StringEncoding] autorelease];
+	if(responseString && [responseString rangeOfString:@"access_token="].length != 0) {
+		NSArray *resultParts = [responseString componentsSeparatedByString:@"&"];
+		NSMutableDictionary *infos = [NSMutableDictionary dictionaryWithCapacity:resultParts.count];
+		for(NSString *resultPart in resultParts) {
+			NSArray *r = [resultPart componentsSeparatedByString:@"="];
+			[infos setObject:[r objectAtIndex:1] forKey:[r objectAtIndex:0]];
+		}
+		
+		if(infos.count) {
+			if ([self.delegate respondsToSelector:@selector(request:didFinishLoadingWithResult:)]) {
+				[self.delegate request:self didFinishLoadingWithResult:infos];
+			}
+		} else {
+			[self failedWithError:[self errorWithCode:kTencentErrorCode
+											 userInfo:[NSDictionary dictionaryWithObject:[NSString stringWithFormat:@"%d", kTencentErrorCodeParseError]
+																				  forKey:kTencentErrorCodeKey]]];
+		}
+		
+		return;
+	}
+	
+	NSError* error = nil;
+	id result = [self parseJSONData:_responseData error:&error];
+	
+	if (error) {
+		[self failedWithError:error];
+	} else {
+		if ([self.delegate respondsToSelector:@selector(request:didFinishLoadingWithResult:)]) {
+			[self.delegate request:self didFinishLoadingWithResult:(result == nil ? _responseData : result)];
+		}
+	}
+	
+	self.delegate = nil;
+}
+
+- (void)failedWithError:(NSError *)error {
+	if ([self.delegate respondsToSelector:@selector(request:didFailWithError:)]) {
+		[self.delegate request:self didFailWithError:error];
+	}
+
+	self.delegate = nil;
+}
+
+@end

@@ -1,0 +1,467 @@
+//
+//  TPASinaEngine.m
+//  ThirdPartAccount
+//
+//  Created by Martin Yin on 12-7-17.
+//  Copyright (c) 2012年 Autonavi. All rights reserved.
+//
+
+#import "TPASinaEngine.h"
+#import "TPASinaURLGenerator.h"
+#import "TPASinaDefines.h"
+#import "SFHFKeychainUtils.h"
+
+#define kSinaKeychainUserID               @"SinaUserID"
+#define kSinaKeychainAccessToken          @"SinaAccessToken"
+#define kSinaKeychainExpireTime           @"SinaExpireTime"
+
+@interface TPASinaEngine () {
+	BOOL		_ssoLoggingIn;
+}
+
+@end
+
+@implementation TPASinaEngine
+
+@synthesize appKey = _appKey;
+@synthesize appSecret = _appSecret;
+@synthesize userID = _userID;
+@synthesize accessToken = _accessToken;
+@synthesize expireTime = _expireTime;
+@synthesize redirectURI = _redirectURI;
+@synthesize ssoCallbackScheme = _ssoCallbackScheme;
+@synthesize delegate = _delegate;
+@synthesize requestMethod = _requestMethod;
+@synthesize request = _request;
+@synthesize authorize = _authorize;
+
+- (id)init {
+	self = [super init];
+	if(self) {
+		self.appKey = nil;
+		self.appSecret = nil;
+		self.userID = nil;
+		self.accessToken = nil;
+		self.expireTime = 0;
+		self.redirectURI = nil;
+		self.ssoCallbackScheme = nil;
+		self.requestMethod = nil;
+		self.request = nil;
+		self.authorize = nil;
+		_ssoLoggingIn = NO;
+	}
+	
+	return self;
+}
+
+#pragma mark -
+#pragma mark life style
+- (id)initWithAppKey:(NSString *)appKey appSecret:(NSString *)appSecret {
+	return [self initWithAppKey:appKey appSecret:appSecret ssoCallback:nil];
+}
+
+- (id)initWithAppKey:(NSString *)appKey appSecret:(NSString *)appSecret ssoCallback:(NSString *)ssoCallback {
+	self = [self init];
+	if(self) {
+		self.appKey = appKey;
+		self.appSecret = appSecret;
+		self.redirectURI = @"http://";
+		if(ssoCallback)
+			self.ssoCallbackScheme = ssoCallback;
+		else
+			self.ssoCallbackScheme = [NSString stringWithFormat:@"sinaweibosso.%@://", self.appKey];
+		
+		[self readAuthorizeDataFromKeychain];
+	}
+	
+	return self;
+}
+
+- (void)dealloc {
+    [_request setDelegate:nil];
+    [_request disconnect];
+
+    [_appKey release]; _appKey = nil;
+
+    [_appSecret release]; _appSecret = nil;
+    
+    [_userID release]; _userID = nil;
+    [_accessToken release]; _accessToken = nil;
+    
+    [_redirectURI release]; _redirectURI = nil;
+    [_ssoCallbackScheme release]; _ssoCallbackScheme = nil;
+    
+	[_requestMethod release]; _requestMethod = nil;
+    [_request release]; _request = nil;
+    
+    [_authorize setDelegate:nil];
+    [_authorize release]; _authorize = nil;
+
+	_delegate = nil;
+//    rootViewController = nil;
+    
+    [super dealloc];
+}
+
+#pragma mark -
+#pragma mark public method
+- (void)login {
+	if ([self isAlreadyLogin]) {
+		if ([_delegate respondsToSelector:@selector(engineAlreadyLogin:)]) {
+			[_delegate engineAlreadyLogin:self];
+		}
+		return;
+    }
+    
+	_ssoLoggingIn = NO;
+	
+	// open sina weibo app
+	UIDevice *device = [UIDevice currentDevice];
+	if ([device respondsToSelector:@selector(isMultitaskingSupported)] &&
+		[device isMultitaskingSupported])
+	{
+		NSDictionary *params = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+								self.appKey, @"client_id",
+								self.redirectURI, @"redirect_uri",
+								self.ssoCallbackScheme, @"callback_uri", nil];
+		
+		NSString *ssoURL = [TPASinaURLGenerator genSSOURL:params];
+		if([[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:ssoURL]]) {
+			_ssoLoggingIn = [[UIApplication sharedApplication] openURL:[NSURL URLWithString:ssoURL]];
+		}
+	}
+	
+	
+	if(!_ssoLoggingIn) {
+		[self.authorize startAuthorize];
+	}
+}
+
+- (void)logout {
+    [self deleteAuthorizeDataInKeychain];
+    
+	NSHTTPCookieStorage* cookies = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+	NSArray* sinaweiboCookies = [cookies cookiesForURL:[NSURL URLWithString:@"https://open.weibo.cn"]];
+    
+	for (NSHTTPCookie* cookie in sinaweiboCookies) {
+		[cookies deleteCookie:cookie];
+	}
+    
+    if ([_delegate respondsToSelector:@selector(engineDidLogout:)]) {
+        [_delegate engineDidLogout:self];
+    }
+}
+
+//
+//请求数据的方法
+- (void)loadRequestWithMethodName:(NSString *)methodName
+                       httpMethod:(NSString *)httpMethod
+                           params:(NSDictionary *)params
+                     postDataType:(TPARequestPostDataType)postDataType
+                 httpHeaderFields:(NSDictionary *)httpHeaderFields {
+	if (![self isAlreadyLogin]) {
+        if ([_delegate respondsToSelector:@selector(engineNotAuthorized:)]) {
+            [_delegate engineNotAuthorized:self];
+        }
+        return;
+	}
+    
+	// Step 2.
+    // Check if the access token is expired.
+    if ([self isAuthorizeExpired]) {
+        if ([_delegate respondsToSelector:@selector(engineAuthorizeExpired:)]) {
+            [_delegate engineAuthorizeExpired:self];
+        }
+        return;
+    }
+    
+	if(_request) {
+		_request.delegate = nil;
+		[_request disconnect];
+		[_request release];
+		_request = nil;
+	}
+	
+	self.requestMethod = methodName;
+	if([httpMethod isEqualToString:@"GET"]) {
+		NSString *urlString = [TPASinaURLGenerator serializeURL:[NSString stringWithFormat:@"%@%@", kSinaAPIDomain, methodName]
+														 params:params
+													accessToken:_accessToken
+													 httpMethod:httpMethod];
+		_request = [[TPASinaRequest alloc] initWithURL:urlString
+											  delegate:self
+											httpMethod:httpMethod
+												params:nil
+										  postDataType:kTPARequestPostDataTypeNone
+									  httpHeaderFields:httpHeaderFields];
+	} else {
+		NSMutableDictionary *mutableParams = [NSMutableDictionary dictionaryWithDictionary:params];
+		[mutableParams setObject:_accessToken forKey:@"access_token"];
+		
+		_request = [[TPASinaRequest alloc] initWithURL:[NSString stringWithFormat:@"%@%@", kSinaAPIDomain, methodName]
+											  delegate:self
+											httpMethod:@"POST"
+												params:mutableParams
+										  postDataType:postDataType
+									  httpHeaderFields:httpHeaderFields];
+	}
+    
+	[_request connect];
+}
+
+
+
+
+#pragma mark -
+#pragma mark Private Method
+
+//
+//请求数据地址的拼接
+- (NSString *)getParamValueFromUrl:(NSString*)url paramName:(NSString *)paramName {
+	if (![paramName hasSuffix:@"="]) {
+		paramName = [NSString stringWithFormat:@"%@=", paramName];
+	}
+	
+	NSString * str = nil;
+	NSRange start = [url rangeOfString:paramName];
+	if (start.location != NSNotFound) {
+		// confirm that the parameter is not a partial name match
+		unichar c = '?';
+		if (start.location != 0) {
+			c = [url characterAtIndex:start.location - 1];
+		}
+		
+		if (c == '?' || c == '&' || c == '#') {
+			NSRange end = [[url substringFromIndex:start.location+start.length] rangeOfString:@"&"];
+			NSUInteger offset = start.location+start.length;
+			str = end.location == NSNotFound ?
+			[url substringFromIndex:offset] :
+			[url substringWithRange:NSMakeRange(offset, end.location)];
+			str = [str stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+		}
+	}
+	
+	return str;
+}
+
+
+//
+//刷新Authorize认证
+- (void)refreshAuthorize {
+	[self.authorize refreshAuthorize:_accessToken];
+}
+
+//
+//是否已经登陆
+- (BOOL)isAlreadyLogin {
+    return _userID && _accessToken && (_expireTime > 0);
+}
+
+//
+//认证是否过期
+- (BOOL)isAuthorizeExpired {
+    if ([[NSDate date] timeIntervalSince1970] > _expireTime) {
+        // force to log out
+        [self deleteAuthorizeDataInKeychain];
+        
+        return YES;
+    }
+    return NO;
+}
+
+
+
+- (void)saveAuthorizeDataToKeychain {
+	NSString *serviceName = [NSString stringWithFormat:@"%@_KeyChain", NSStringFromClass([self class])];
+	[SFHFKeychainUtils storeUsername:kSinaKeychainUserID andPassword:_userID forServiceName:serviceName updateExisting:YES error:nil];
+	[SFHFKeychainUtils storeUsername:kSinaKeychainAccessToken andPassword:_accessToken forServiceName:serviceName updateExisting:YES error:nil];
+	[SFHFKeychainUtils storeUsername:kSinaKeychainExpireTime andPassword:[NSString stringWithFormat:@"%lf", _expireTime] forServiceName:serviceName updateExisting:YES error:nil];
+}
+
+
+- (void)readAuthorizeDataFromKeychain {
+	NSString *serviceName = [NSString stringWithFormat:@"%@_KeyChain", NSStringFromClass([self class])];
+	self.userID = [SFHFKeychainUtils getPasswordForUsername:kSinaKeychainUserID andServiceName:serviceName error:nil];
+	self.accessToken = [SFHFKeychainUtils getPasswordForUsername:kSinaKeychainAccessToken andServiceName:serviceName error:nil];
+	self.expireTime = [[SFHFKeychainUtils getPasswordForUsername:kSinaKeychainExpireTime andServiceName:serviceName error:nil] doubleValue];
+}
+
+- (void)deleteAuthorizeDataInKeychain {
+	self.userID = nil;
+	self.accessToken = nil;
+	self.expireTime = 0;
+    
+	NSString *serviceName = [NSString stringWithFormat:@"%@_KeyChain", NSStringFromClass([self class])];
+	[SFHFKeychainUtils deleteItemForUsername:kSinaKeychainUserID andServiceName:serviceName error:nil];
+	[SFHFKeychainUtils deleteItemForUsername:kSinaKeychainAccessToken andServiceName:serviceName error:nil];
+	[SFHFKeychainUtils deleteItemForUsername:kSinaKeychainExpireTime andServiceName:serviceName error:nil];
+}
+
+
+
+- (BOOL)handleOpenURL:(NSURL *)url {
+	NSString *urlString = [url absoluteString];
+	if ([urlString hasPrefix:self.ssoCallbackScheme]) {
+		if (!_ssoLoggingIn) {
+			// sso callback after user have manually opened the app
+			// ignore the request
+		} else {
+			_ssoLoggingIn = NO;
+			
+			if ([self getParamValueFromUrl:urlString paramName:@"sso_error_user_cancelled"]) {
+				if([self.delegate respondsToSelector:@selector(engineDidLoginCancelled:)]) {
+					[self.delegate engineDidLoginCancelled:self];
+				}
+			} else if ([self getParamValueFromUrl:urlString paramName:@"sso_error_invalid_params"]) {
+				if ([self.delegate respondsToSelector:@selector(engine:didFailToLoginWithError:)]) {
+					NSString *error_description = @"Invalid sso params";
+					NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:
+											  error_description, NSLocalizedDescriptionKey, nil];
+					NSError *error = [NSError errorWithDomain:kSinaErrorDomain
+														 code:kSinaErrorCodeAccessError
+													 userInfo:userInfo];
+					[self.delegate engine:self didFailToLoginWithError:error];
+				}
+			} else if ([self getParamValueFromUrl:urlString paramName:@"error_code"]) {
+				NSString *error_code = [self getParamValueFromUrl:urlString paramName:@"error_code"];
+				NSString *error = [self getParamValueFromUrl:urlString paramName:@"error"];
+				NSString *error_uri = [self getParamValueFromUrl:urlString paramName:@"error_uri"];
+				NSString *error_description = [self getParamValueFromUrl:urlString paramName:@"error_description"];
+                
+				if ([error_code isEqualToString:@"21330"]) {
+					if([self.delegate respondsToSelector:@selector(engineDidLoginCancelled:)]) {
+						[self.delegate engineDidLoginCancelled:self];
+					}
+				} else {
+					if ([self.delegate respondsToSelector:@selector(engine:didFailToLoginWithError:)]) {
+						NSDictionary *errorInfo = [NSDictionary dictionaryWithObjectsAndKeys:
+												   error, @"error",
+												   error_uri, @"error_uri",
+												   error_code, @"error_code",
+												   error_description, @"error_description", nil];
+						NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:
+												  errorInfo, @"errorInfo",
+												  error_description, NSLocalizedDescriptionKey, nil];
+						NSError *error = [NSError errorWithDomain:kSinaErrorDomain
+															 code:[error_code intValue]
+														 userInfo:userInfo];
+						[self.delegate engine:self didFailToLoginWithError:error];
+					}
+				}
+			}
+			else
+			{
+				NSString *access_token = [self getParamValueFromUrl:urlString paramName:@"access_token"];
+				NSString *expires_in = [self getParamValueFromUrl:urlString paramName:@"expires_in"];
+                //				NSString *remind_in = [self getParamValueFromUrl:urlString paramName:@"remind_in"];
+				NSString *uid = [self getParamValueFromUrl:urlString paramName:@"uid"];
+                //				NSString *refresh_token = [self getParamValueFromUrl:urlString paramName:@"refresh_token"];
+				
+                //				NSMutableDictionary *authInfo = [NSMutableDictionary dictionary];
+                //				if (access_token) [authInfo setObject:access_token forKey:@"access_token"];
+                //				if (expires_in) [authInfo setObject:expires_in forKey:@"expires_in"];
+                //				if (remind_in) [authInfo setObject:remind_in forKey:@"remind_in"];
+                //				if (refresh_token) [authInfo setObject:refresh_token forKey:@"refresh_token"];
+                //				if (uid) [authInfo setObject:uid forKey:@"uid"];
+				
+				if(access_token && expires_in && uid) {
+					self.accessToken = access_token;
+					self.userID = uid;
+					self.expireTime = [[NSDate date] timeIntervalSince1970] + [expires_in integerValue];
+                    
+					[self saveAuthorizeDataToKeychain];
+                    
+					if ([self.delegate respondsToSelector:@selector(engineDidLogin:)]) {
+						[self.delegate engineDidLogin:self];
+					}
+				}
+			}
+		}
+	
+    }
+	
+	return YES;
+}
+
+
+//
+//sso认证完成后程序重新激活
+- (void)applicationDidBecomeActive {
+	if(_ssoLoggingIn) {
+		// user open the app manually
+		// clean sso login state
+		_ssoLoggingIn = NO;
+		
+		if ([self.delegate respondsToSelector:@selector(engineDidLoginCancelled:)]) {
+			[self.delegate engineDidLoginCancelled:self];
+		}
+	}
+}
+
+
+#pragma mark Getter&Setter
+//
+//配置和初始化sina的Authorize类返回
+- (TPASinaAuthorize *)authorize {
+	if(!_authorize) {
+		_authorize = [[TPASinaAuthorize alloc] initWithAppKey:_appKey appSecret:_appSecret redirectURI:_redirectURI];
+		_authorize.delegate = self;
+	}
+	
+	return _authorize;
+}
+
+
+
+#pragma mark -
+#pragma mark TPAequest delegate
+
+- (void)request:(TPARequest *)request didFinishLoadingWithResult:(id)result {
+	[_request disconnect];
+	
+	NSLog(@"result: %@", result);
+	if ([_delegate respondsToSelector:@selector(engine:requestDidSucceedWithResult:)]) {
+		[_delegate engine:self requestDidSucceedWithResult:result];
+	}
+}
+
+- (void)request:(TPARequest *)request didFailWithError:(NSError *)error {
+	[_request disconnect];
+	
+	if ([_delegate respondsToSelector:@selector(engine:requestDidFailWithError:)]) {
+		[_delegate engine:self requestDidFailWithError:error];
+	}
+}
+
+
+#pragma mark -
+#pragma mark authorize delegate
+
+- (void)authorize:(id<TPAAuthorize>)authorize didSucceedWithAccessToken:(NSString *)accessToken userID:(NSString *)userID expiresIn:(NSInteger)seconds otherInfos:(NSDictionary *)otherInfos {
+	self.accessToken = accessToken;
+	self.userID = userID;
+	self.expireTime = [[NSDate date] timeIntervalSince1970] + seconds;
+	
+	[self saveAuthorizeDataToKeychain];
+	
+	if ([self.delegate respondsToSelector:@selector(engineDidLogin:)]) {
+		[self.delegate engineDidLogin:self];
+	}
+}
+
+- (void)authorizeCancelled:(id<TPAAuthorize>)authorize {
+	if ([self.delegate respondsToSelector:@selector(engineDidLoginCancelled:)]) {
+		[self.delegate engineDidLoginCancelled:self];
+	}
+}
+
+- (void)authorize:(id<TPAAuthorize>)authorize didFailWithError:(NSError *)error {
+    if ([self.delegate respondsToSelector:@selector(engine:didFailToLoginWithError:)]) {
+        [self.delegate engine:self didFailToLoginWithError:error];
+    }
+}
+
+
+
+
+@end

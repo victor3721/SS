@@ -1,0 +1,121 @@
+//
+//  TPAURLGenerator.m
+//  ThirdPartAccount
+//
+//  Created by Yin Martin on 12-7-16.
+//  Copyright (c) 2012年 Autonavi. All rights reserved.
+//
+
+#import <ThirdPartAccount/TPAURLGenerator.h>
+#import <MFUtils/NSString+ext.h>
+#import <MFUtils/NSData+ext.h>
+
+@implementation TPAURLGenerator
+
++ (NSString *)authorizeWithKey:(NSString *)key secret:(NSString *)secret redirectURI:(NSString *)redirectURI {
+	return [self authorizeWithKey:key secret:secret redirectURI:redirectURI others:nil];
+}
+
++ (NSString *)authorizeWithKey:(NSString *)key secret:(NSString *)secret redirectURI:(NSString *)redirectURI others:(NSDictionary *)others {
+	@throw [NSException exceptionWithName:NSInternalInconsistencyException
+								   reason:[NSString stringWithFormat:@"You must override %@ in a subclass", NSStringFromSelector(_cmd)]
+								 userInfo:nil];
+	return nil;
+}
+
++ (NSDictionary *)accessTokenParamsWithKey:(NSString *)key secret:(NSString *)secret redirectURI:(NSString *)redirectURI code:(NSString *)code {
+	return [self accessTokenParamsWithKey:key secret:secret redirectURI:redirectURI code:code others:nil];
+}
+
++ (NSDictionary *)accessTokenParamsWithKey:(NSString *)key secret:(NSString *)secret redirectURI:(NSString *)redirectURI code:(NSString *)code others:(NSDictionary *)others {
+	@throw [NSException exceptionWithName:NSInternalInconsistencyException
+								   reason:[NSString stringWithFormat:@"You must override %@ in a subclass", NSStringFromSelector(_cmd)]
+								 userInfo:nil];
+	return nil;
+}
+
++ (NSString *)serializeURL:(NSString *)baseURL params:(NSDictionary *)params httpMethod:(NSString *)httpMethod {
+	if (![httpMethod isEqualToString:@"GET"]) {
+		return baseURL;
+	}
+	
+	NSURL *parsedURL = [NSURL URLWithString:baseURL];
+	NSString *queryPrefix = parsedURL.query ? @"&" : @"?";
+	NSString *query = [self stringFromDictionary:params];
+	
+	return [NSString stringWithFormat:@"%@%@%@", baseURL, queryPrefix, query];
+}
+
++ (NSString *)stringFromDictionary:(NSDictionary *)dict {
+	NSMutableArray *pairs = [NSMutableArray array];
+	for (NSString *key in [dict keyEnumerator]) {
+		if (!([[dict valueForKey:key] isKindOfClass:[NSString class]])) {
+			continue;
+		}
+		
+		[pairs addObject:[NSString stringWithFormat:@"%@=%@", key, [[dict objectForKey:key] urlEncode]]];
+	}
+	
+	return [pairs componentsJoinedByString:@"&"];
+}
+
++ (void)appendUTF8Body:(NSMutableData *)body dataString:(NSString *)dataString {
+	[body appendData:[dataString dataUsingEncoding:NSUTF8StringEncoding]];
+}
+
++ (NSMutableData *)postBodyFromParams:(NSDictionary *)params postDataType:(TPARequestPostDataType)postDataType {
+	NSMutableData *body = [NSMutableData data];
+	
+	if (postDataType == kTPARequestPostDataTypeNormal)
+	{
+		[self appendUTF8Body:body dataString:[self stringFromDictionary:params]];
+	}
+	else if (postDataType == kTPARequestPostDataTypeMultipart)
+	{
+		NSString *bodyPrefixString = [NSString stringWithFormat:@"--%@\r\n", kTPARequestStringBoundary];
+		NSString *bodySuffixString = [NSString stringWithFormat:@"\r\n--%@--\r\n", kTPARequestStringBoundary];
+		
+		NSMutableDictionary *dataDictionary = [NSMutableDictionary dictionary];
+		
+		[self appendUTF8Body:body dataString:bodyPrefixString];
+		
+		for (id key in [params keyEnumerator])
+		{
+			if (([[params valueForKey:key] isKindOfClass:[UIImage class]]) || ([[params valueForKey:key] isKindOfClass:[NSData class]]))
+			{
+				[dataDictionary setObject:[params valueForKey:key] forKey:key];
+				continue;
+			}
+			
+			[self appendUTF8Body:body dataString:[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n\r\n%@\r\n", key, [params valueForKey:key]]];
+			[self appendUTF8Body:body dataString:bodyPrefixString];
+		}
+		
+		if ([dataDictionary count] > 0)
+		{
+			for (id key in dataDictionary)
+			{
+				NSObject *dataParam = [dataDictionary valueForKey:key];
+				
+				if ([dataParam isKindOfClass:[UIImage class]])
+				{
+					NSData* imageData = UIImagePNGRepresentation((UIImage *)dataParam);
+					[self appendUTF8Body:body dataString:[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"file.png\"\r\n", key]];
+					[self appendUTF8Body:body dataString:@"Content-Type: image/png\r\nContent-Transfer-Encoding: binary\r\n\r\n"];
+					[body appendData:imageData];
+				}
+				else if ([dataParam isKindOfClass:[NSData class]])
+				{
+					[self appendUTF8Body:body dataString:[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n", key]];
+					[self appendUTF8Body:body dataString:@"Content-Type: content/unknown\r\nContent-Transfer-Encoding: binary\r\n\r\n"];
+					[body appendData:(NSData*)dataParam];
+				}
+				[self appendUTF8Body:body dataString:bodySuffixString];
+			}
+		}
+	}
+	
+	return body;
+}
+
+@end

@@ -1,0 +1,131 @@
+K 25
+svn:wc:ra_dav:version-url
+V 125
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage
+END
+SDWebImageDownloader.m
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImageDownloader.m
+END
+LICENSE
+K 25
+svn:wc:ra_dav:version-url
+V 133
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/LICENSE
+END
+SDImageCache.h
+K 25
+svn:wc:ra_dav:version-url
+V 140
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDImageCache.h
+END
+SDWebImageDecoder.h
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImageDecoder.h
+END
+SDWebImageManagerDelegate.h
+K 25
+svn:wc:ra_dav:version-url
+V 153
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImageManagerDelegate.h
+END
+SDImageCache.m
+K 25
+svn:wc:ra_dav:version-url
+V 140
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDImageCache.m
+END
+SDWebImageDecoder.m
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImageDecoder.m
+END
+SDWebImageManager.h
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImageManager.h
+END
+UIButton+WebCache.h
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/UIButton+WebCache.h
+END
+README.md
+K 25
+svn:wc:ra_dav:version-url
+V 135
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/README.md
+END
+SDWebImageManager.m
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImageManager.m
+END
+UIImageView+WebCache.h
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/UIImageView+WebCache.h
+END
+UIButton+WebCache.m
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/UIButton+WebCache.m
+END
+SDWebImageCompat.h
+K 25
+svn:wc:ra_dav:version-url
+V 144
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImageCompat.h
+END
+UIImageView+WebCache.m
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/UIImageView+WebCache.m
+END
+SDWebImagePrefetcher.h
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImagePrefetcher.h
+END
+.gitignore
+K 25
+svn:wc:ra_dav:version-url
+V 136
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/.gitignore
+END
+SDWebImageDownloaderDelegate.h
+K 25
+svn:wc:ra_dav:version-url
+V 156
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImageDownloaderDelegate.h
+END
+SDWebImagePrefetcher.m
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImagePrefetcher.m
+END
+SDWebImageDownloader.h
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDWebImageDownloader.h
+END
+SDImageCacheDelegate.h
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/svn/RD/!svn/ver/2967/NXB/%E5%BC%80%E5%8F%91%E5%BA%93/07_%E6%BA%90%E4%BB%A3%E7%A0%81/code/trunk/NXB-ios/NXB/untils/SDWebImage/SDImageCacheDelegate.h
+END

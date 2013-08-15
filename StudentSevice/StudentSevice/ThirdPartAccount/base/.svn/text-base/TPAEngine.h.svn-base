@@ -1,0 +1,64 @@
+//
+//  TPAEngine.h
+//  ThirdPartAccount
+//
+//  Created by Yin Martin on 12-7-16.
+//  Copyright (c) 2012年 Autonavi. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import <ThirdPartAccount/TPAURLGenerator.h>
+
+@protocol TPAEngineDelegate;
+
+@protocol TPAEngine <NSObject>
+
+- (id)initWithAppKey:(NSString *)appKey appSecret:(NSString *)appSecret;
+- (id)initWithAppKey:(NSString *)appKey appSecret:(NSString *)appSecret ssoCallback:(NSString *)ssoCallback;
+
+- (void)setDelegate:(id<TPAEngineDelegate>)delegate;
+
+- (void)login;
+- (void)logout;
+
+- (void)refreshAuthorize;
+
+- (BOOL)isAlreadyLogin;
+- (BOOL)isAuthorizeExpired;
+
+- (void)loadRequestWithMethodName:(NSString *)methodName
+                       httpMethod:(NSString *)httpMethod
+                           params:(NSDictionary *)params
+                     postDataType:(TPARequestPostDataType)postDataType
+                 httpHeaderFields:(NSDictionary *)httpHeaderFields;
+
+- (void)saveAuthorizeDataToKeychain;
+- (void)readAuthorizeDataFromKeychain;
+- (void)deleteAuthorizeDataInKeychain;
+
+- (BOOL)handleOpenURL:(NSURL *)url;
+- (void)applicationDidBecomeActive;
+
+@end
+
+@protocol TPAEngineDelegate <NSObject>
+
+@optional
+
+- (void)engineAlreadyLogin:(id<TPAEngine>)engine;
+
+- (void)engineDidLogin:(id<TPAEngine>)engine;
+
+- (void)engineDidLoginCancelled:(id<TPAEngine>)engine;
+
+- (void)engine:(id<TPAEngine>)engine didFailToLoginWithError:(NSError *)error;
+
+- (void)engineDidLogout:(id<TPAEngine>)engine;
+
+- (void)engineNotAuthorized:(id<TPAEngine>)engine;
+- (void)engineAuthorizeExpired:(id<TPAEngine>)engine;
+
+- (void)engine:(id<TPAEngine>)engine requestDidFailWithError:(NSError *)error;
+- (void)engine:(id<TPAEngine>)engine requestDidSucceedWithResult:(id)result;
+
+@end

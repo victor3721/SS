@@ -1,0 +1,63 @@
+//
+//  ThirdPartAccount.h
+//  ThirdPartAccount
+//
+//  Created by Yin Martin on 12-7-16.
+//  Copyright (c) 2012年 Autonavi. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import <ThirdPartAccount/TPAEngine.h>
+#import <ThirdPartAccount/TPASinaEngine.h>
+#import <ThirdPartAccount/TPATencentEngine.h>
+
+typedef enum {
+	TPAEngineTypeNone = 0,
+	TPAEngineTypeSina,
+	TPAEngineTypeTencent,
+} TPAEngineType;
+
+@class ThirdPartAccount;
+
+@protocol ThirdPartAccountDelegate <NSObject>
+@optional
+
+- (void)thirdPartAccountNotSetEngineType:(ThirdPartAccount *)thirdPartAccount;
+
+- (void)thirdPartAccount:(ThirdPartAccount *)thirdPartAccount didLoginSccuess:(TPAEngineType)type;
+
+- (void)thirdPartAccountLoginCancelled:(ThirdPartAccount *)thirdPartAccount;
+
+- (void)thirdPartAccount:(ThirdPartAccount *)thirdPartAccount didFailToLoginWithError:(NSError *)error;
+
+- (void)thirdPartAccount:(ThirdPartAccount *)thirdPartAccount didLogoutSccuess:(TPAEngineType)type;
+
+- (void)thirdPartAccountNotAuthorized:(ThirdPartAccount *)thirdPartAccount;
+- (void)thirdPartAccountAuthorizeExpired:(ThirdPartAccount *)thirdPartAccount;
+
+- (void)thirdPartAccount:(ThirdPartAccount *)thirdPartAccount requestDidFailWithError:(NSError *)error;
+- (void)thirdPartAccount:(ThirdPartAccount *)thirdPartAccount requestDidSucceedWithResult:(id)result;
+
+- (void)thirdPartAccount:(ThirdPartAccount *)thirdPartAccount userInfo:(NSDictionary *)userInfo; //key: name/avatar
+
+@end
+
+@interface ThirdPartAccount : NSObject <TPAEngineDelegate>
+
+@property (assign, nonatomic) id<ThirdPartAccountDelegate> delegate;
+@property (strong, nonatomic) NSString *ssoCallback;
+@property (assign, nonatomic) TPAEngineType engineType;
+
++ (id)standardTPA;
+
+- (id<TPAEngine>)currentEngine;
+
+- (void)login;
+- (void)logout;
+
+- (void)getUserInfo;
+
+- (void)applicationDidBecomeActive;
+- (BOOL)handleOpenURL:(NSURL *)url;
+
+@end

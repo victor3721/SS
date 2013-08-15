@@ -1,0 +1,72 @@
+//
+//  TPASinaRequest.m
+//  ThirdPartAccount
+//
+//  Created by Martin Yin on 12-7-17.
+//  Copyright (c) 2012年 Autonavi. All rights reserved.
+//
+
+#import <ThirdPartAccount/TPASinaRequest.h>
+#import <ThirdPartAccount/TPASinaDefines.h>
+#import <MFUtils/CJSONDeserializer.h>
+
+@implementation TPASinaRequest
+
+- (id)errorWithCode:(NSInteger)code userInfo:(NSDictionary *)userInfo {
+    return [NSError errorWithDomain:kSinaErrorDomain code:code userInfo:userInfo];
+}
+
+- (id)parseJSONData:(NSData *)data error:(NSError **)error {
+	CJSONDeserializer *deserializer = [CJSONDeserializer deserializer];
+	
+	NSError *parseError = nil;
+	//	id result = [jsonParser objectWithString:dataString error:&parseError];
+	id result = [deserializer deserialize:data error:&parseError];
+	
+	if (parseError) {
+		if (error != nil) {
+			*error = [self errorWithCode:kSinaErrorCode
+								userInfo:[NSDictionary dictionaryWithObject:[NSString stringWithFormat:@"%d", kSinaErrorCodeParseError]
+																	 forKey:kSinaErrorCodeKey]];
+		}
+	}
+	
+	if ([result isKindOfClass:[NSDictionary class]]) {
+		if ([result objectForKey:@"error_code"] != nil && [[result objectForKey:@"error_code"] intValue] != 200) {
+			if (error != nil) {
+				*error = [self errorWithCode:kSinaErrorCodeInterface userInfo:result];
+			}
+		}
+	}
+	
+	return result;
+}
+
+- (void)handleResponseData {
+	if ([self.delegate respondsToSelector:@selector(request:didReceiveRawData:)]) {
+		[self.delegate request:self didReceiveRawData:_responseData];
+	}
+	
+	NSError* error = nil;
+	id result = [self parseJSONData:_responseData error:&error];
+	
+	if (error) {
+		[self failedWithError:error];
+	} else {
+		if ([self.delegate respondsToSelector:@selector(request:didFinishLoadingWithResult:)]) {
+			[self.delegate request:self didFinishLoadingWithResult:(result == nil ? _responseData : result)];
+		}
+	}
+	
+	self.delegate = nil;
+}
+
+- (void)failedWithError:(NSError *)error {
+	if ([self.delegate respondsToSelector:@selector(request:didFailWithError:)]) {
+		[self.delegate request:self didFailWithError:error];
+	}
+
+	self.delegate = nil;
+}
+
+@end
